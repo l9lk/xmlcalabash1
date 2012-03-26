@@ -8,8 +8,11 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.SourceLocator;
 import javax.xml.transform.ErrorListener;
 
+import com.xmlcalabash.core.XProcException;
 import com.xmlcalabash.core.XProcRuntime;
 import com.xmlcalabash.core.XProcConstants;
+import com.xmlcalabash.model.Step;
+
 import net.sf.saxon.trans.XPathException;
 
 import java.net.URI;
@@ -30,6 +33,7 @@ public class StepErrorListener implements ErrorListener {
     private static QName _line = new QName("", "line");
     private static QName _column = new QName("", "column");
     private static QName _code = new QName("", "code");
+    private static QName _name = new QName("", "name");
 
     private XProcRuntime runtime = null;
     private URI baseURI = null;
@@ -69,15 +73,37 @@ public class StepErrorListener implements ErrorListener {
                 return true;
             }
         }
-        
+
+        SourceLocator loc = exception.getLocator();
+        StructuredQName qCode = null;
+        StructuredQName qType = null;
         TreeWriter writer = new TreeWriter(runtime);
 
         writer.startDocument(baseURI);
         writer.addStartElement(c_error);
-        writer.addAttribute(_type, type);
+
+        
+        
+        // read error properties from XProcException
+        if (exception.getException() instanceof XProcException) {
+        	String name = "unknown";
+        	XProcException e = (XProcException) exception.getException();
+        	QName eq = e.getErrorCode();
+            qCode = new StructuredQName(eq.getPrefix(), eq.getNamespaceURI(), eq.getLocalName());
+        	Step s = e.getStep();
+        	if(s!=null){
+                qType = new StructuredQName(s.getType().getPrefix(), s.getType().getNamespaceURI(), s.getType().getLocalName());
+        		name = s.getName();
+        	}
+            writer.addAttribute(_name, name);
+            loc = e.getLocator();
+        }
+
+        if(qType==null)qType = new StructuredQName("", "", type);
+
+        writer.addAttribute(_type, qType.getDisplayName());
 
         String message = exception.toString();
-        StructuredQName qCode = null;
         if (exception instanceof XPathException) {
             XPathException xxx = (XPathException) exception;
             qCode = xxx.getErrorCodeQName();
@@ -94,12 +120,15 @@ public class StepErrorListener implements ErrorListener {
         if (qCode == null && exception.getException() instanceof XPathException) {
             qCode = ((XPathException) exception.getException()).getErrorCodeQName();
         }
+        
+        
         if (qCode != null) {
+            writer.addNamespace(qType.getPrefix(), qType.getURI());
+            writer.addNamespace(qCode.getPrefix(), qCode.getURI());
             writer.addAttribute(_code, qCode.getDisplayName());
         }
 
-        if (exception.getLocator() != null) {
-            SourceLocator loc = exception.getLocator();
+        if (loc!=null){
             boolean done = false;
             while (!done && loc == null) {
                 if (exception.getException() instanceof TransformerException) {
