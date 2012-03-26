@@ -90,16 +90,22 @@ public class XProcURIResolver implements URIResolver, EntityResolver {
         }
 
         if (uriResolver != null) {
-            URL absoluteURI = null;
 
-            // This is an attempt to deal with jar: URIs, pipelines run from inside jar files.
-            try {
-                absoluteURI = new URL(new URL(base), href);
-            } catch (MalformedURLException mue) {
-                throw new XProcException(mue);
+        	// First give custom uriresolver a try to handle specific URIs (urn:)
+            Source resolved = uriResolver.resolve(href, base);
+        	
+        	// If it fails try jar: URIs
+            if (resolved==null){
+	        	URL absoluteURI = null;
+	
+	            // This is an attempt to deal with jar: URIs, pipelines run from inside jar files.
+	            try {
+	                absoluteURI = new URL(new URL(base), href);
+	            } catch (MalformedURLException mue) {
+	                throw new XProcException(mue);
+	            }
+	            resolved = uriResolver.resolve(absoluteURI.toString(), base);
             }
-
-            Source resolved = uriResolver.resolve(absoluteURI.toString(), base);
 
             // FIXME: This is a grotesque hack. This is wrong. Wrong. Wrong.
             // To support caching, XMLResolver (xmlresolver.org) returns a Source even when it hasn't
