@@ -55,6 +55,9 @@ import java.net.URISyntaxException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.transform.ErrorListener;
+import javax.xml.transform.TransformerException;
+
 /**
  * Created by IntelliJ IDEA.
  * User: ndw
@@ -274,6 +277,19 @@ public class XAtomicStep extends XStep {
     }
 
     public void run() throws SaxonApiException {
+    	try{
+    		internalRun();
+    	}catch (XProcException e) {
+			ErrorListener el = runtime.getConfiguration().getProcessor().getUnderlyingConfiguration().getErrorListener();
+			if (el!=null){
+				try{el.error(new TransformerException(e));}catch (TransformerException ex){};
+			}
+			throw e;
+		}
+    }
+    
+    
+    private void internalRun() throws SaxonApiException {
         XProcStep xstep = runtime.getConfiguration().newStep(runtime, this);
 
         // If there's more than one reader, collapse them all into a single reader
@@ -548,9 +564,11 @@ public class XAtomicStep extends XStep {
                 Binding binding = var.getBinding().firstElement();
                 ReadablePipe pipe = getPipeFromBinding(binding);
                 doc = pipe.read();
+/* this has to be comment for split-sequence step. sd
                 if (pipe.moreDocuments()) {
                     throw XProcException.dynamicError(step, 8, "More than one document in context for parameter '" + var.getName() + "'");
                 }
+*/
             }
         } catch (SaxonApiException sae) {
             throw new XProcException(sae);
