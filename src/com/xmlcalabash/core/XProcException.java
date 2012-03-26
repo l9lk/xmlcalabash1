@@ -111,6 +111,12 @@ public class XProcException extends RuntimeException {
         this.step = step;
     }
 
+    public XProcException(QName errorCode, Step step, Throwable cause, String message) {
+        super(message,cause);
+        error = errorCode;
+        this.step = step;
+    }
+
     public XProcException(QName errorCode, XdmNode node, Throwable cause, String message) {
         super(message,cause);
         error = errorCode;
@@ -191,6 +197,7 @@ public class XProcException extends RuntimeException {
     public QName getErrorCode() {
         return error;
     }
+    
 
     public Step getStep() {
         return step;
