@@ -57,6 +57,7 @@ public class Try  extends DeclareStep {
         // Assume that everything will be OK when we validate...
         if (subpipeline.size() > 0) {
             Step step = subpipeline.get(0);
+            Step catch_ = subpipeline.get(1);
             for (Input input : step.inputs()) {
                 Input cinput = new Input(runtime, step.getNode());
                 cinput.setPort(input.getPort());
@@ -67,6 +68,9 @@ public class Try  extends DeclareStep {
                 Output coutput = new Output(runtime, step.getNode());
                 coutput.setPort(output.getPort());
                 coutput.setPrimary(output.getPrimary());
+                // according to recommendation sequence property on result port of try step should 
+                // be set if either group or catch step sequence is turned on.
+                coutput.setSequence(output.getSequence() || catch_.getOutput(output.getPort()).getSequence());
                 addOutput(coutput);
             }
         }
