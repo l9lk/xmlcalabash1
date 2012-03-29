@@ -34,6 +34,9 @@ public class StepErrorListener implements ErrorListener {
     private static QName _column = new QName("", "column");
     private static QName _code = new QName("", "code");
     private static QName _name = new QName("", "name");
+    private static QName _mes = new QName(XProcConstants.NS_XPROC_STEP, "message");
+    private static QName _causedby = new QName("", "caused-by");
+    private static QName _cause = new QName("", "cause");
 
     private XProcRuntime runtime = null;
     private URI baseURI = null;
@@ -99,7 +102,7 @@ public class StepErrorListener implements ErrorListener {
             loc = e.getLocator();
         }
 
-        if(qType==null)qType = new StructuredQName("", "", type);
+        if(qType==null)qType = new StructuredQName("", null, type);
 
         writer.addAttribute(_type, qType.getDisplayName());
 
@@ -158,8 +161,13 @@ public class StepErrorListener implements ErrorListener {
         }
 
 
+        writer.addStartElement(_mes);
         writer.startContent();
         writer.addText(message);
+        writer.addEndElement();
+
+        writer.addSubtree(formatException(exception));
+        
         writer.addEndElement();
         writer.endDocument();
 
@@ -167,4 +175,23 @@ public class StepErrorListener implements ErrorListener {
 
         return runtime.getXProcData().catchError(node);
     }
+    
+    protected XdmNode formatException(Throwable e){
+        TreeWriter writer = new TreeWriter(runtime);
+        writer.startDocument(baseURI);
+        writer.addStartElement(_causedby);
+        while (e != null){
+            writer.addStartElement(_cause);
+        	writer.addAttribute(_type, e.getClass().getName());
+            writer.startContent();
+            writer.addText(e.getStackTrace()[0].toString());
+        	writer.addEndElement();
+            e = e.getCause();
+        }
+        writer.addEndElement();
+        writer.endDocument();
+        return writer.getResult();
+    	
+    }
+    
 }
